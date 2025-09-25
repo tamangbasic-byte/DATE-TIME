@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Big Digital Clock with AD + BS Date</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b0b0b;
+      --text: #d6ffd6;
+      --accent: #39ff14;
+    }
+    html,body{height:100%;margin:0}
+    body{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      flex-direction:column;
+      background:var(--bg);
+      color:var(--text);
+      font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    #clock {
+      font-size:6rem;          /* BIG font */
+      font-weight:700;
+      padding:20px 40px;
+      border-radius:15px;
+      border:3px solid var(--accent);
+      box-shadow:0 0 20px rgba(57,255,20,0.4);
+      background:rgba(0,0,0,0.2);
+      letter-spacing:3px;
+      margin-bottom:20px;
+    }
+    #date-ad, #date-bs {
+      font-size:1.5rem;
+      margin:4px 0;
+    }
+    .muted {opacity:0.8}
+    @media (max-width:500px){
+      #clock{font-size:3.5rem;padding:14px 22px}
+    }
+  </style>
+</head>
+<body>
+  <div id="clock">--:--:-- --</div>
+  <div id="date-ad" class="muted">Loading English date…</div>
+  <div id="date-bs" class="muted">Loading Nepali date…</div>
+
+  <!-- Nepali Date Converter library -->
+  <script src="https://cdn.jsdelivr.net/npm/@remotemerge/nepali-date-converter@1/dist/ndc-browser.js"></script>
+
+  <script>
+  (function () {
+    const clockEl = document.getElementById('clock');
+    const dateAdEl = document.getElementById('date-ad');
+    const dateBsEl = document.getElementById('date-bs');
+
+    function toNepaliNumber(num) {
+      const map = { '0':'०','1':'१','2':'२','3':'३','4':'४','5':'५','6':'६','7':'७','8':'८','9':'९' };
+      return String(num).split('').map(c => map[c] || c).join('');
+    }
+
+    function approximateAdToBs(date) {
+      let y = date.getFullYear() + 56;
+      let m = (date.getMonth() + 1) + 8;
+      if (m > 12) { y += Math.floor((m - 1) / 12); m = ((m - 1) % 12) + 1; }
+      return { year: y, month: m, date: date.getDate() };
+    }
+
+    function updateClockAndDates() {
+      const now = new Date();
+
+      // Time
+      let h = now.getHours();
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      h = h % 12 || 12;
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      const ss = String(now.getSeconds()).padStart(2, '0');
+      clockEl.textContent = `${String(h).padStart(2,'0')}:${mm}:${ss} ${ampm}`;
+
+      // AD Date
+      const daysEN = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+      const monthsEN = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      dateAdEl.textContent = `${daysEN[now.getDay()]}, ${monthsEN[now.getMonth()]} ${now.getDate()}, ${now.getFullYear()}`;
+
+      // BS Date (try library, fallback to approximate)
+      let bs;
+      try {
+        if (window.NDC && typeof window.NDC.DateConverter === 'function') {
+          const adStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+          bs = new window.NDC.DateConverter(adStr).toBs();
+        } else {
+          bs = approximateAdToBs(now);
+        }
+      } catch {
+        bs = approximateAdToBs(now);
+      }
+      const nepDays = ["आइतवार","सोमवार","मंगलवार","बुधवार","बिहीवार","शुक्रवार","शनिवार"];
+      const nepMonths = ["बैशाख","जेठ","असार","साउन","भदौ","असोज","कार्तिक","मंसिर","पुष","माघ","फाल्गुण","चैत्र"];
+      dateBsEl.textContent = `${nepDays[now.getDay()]}, ${nepMonths[(bs.month-1+12)%12]} ${toNepaliNumber(bs.date)}, ${toNepaliNumber(bs.year)}`;
+    }
+
+    updateClockAndDates();
+    setInterval(updateClockAndDates, 1000);
+  })();
+  </script>
+</body>
+</html>
